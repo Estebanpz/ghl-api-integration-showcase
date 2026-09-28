@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importador de Leads a GHL</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            min-height: 200px;
+            resize: vertical;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .source-preview {
+            background: #f3f4f6;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 20px;
+        }
+
+        .source-preview strong {
+            color: #374151;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(17, 153, 142, 0.4);
+        }
+
+        .toast-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+            z-index: 9999;
+            opacity: 0;
+            transform: translateX(100px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            pointer-events: none;
+            max-width: calc(100vw - 40px);
+            word-break: break-word;
+        }
+
+        .toast-notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .toast-notification.success {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+        }
+
+        .toast-notification.partial {
+            background: linear-gradient(135deg, #f59e0b, #f97316);
+        }
+
+        /* Preview Section */
+        .preview-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .preview-section.active {
+            display: block;
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .preview-header h2 {
+            font-size: 20px;
+            color: #374151;
+        }
+
+        .preview-count {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .preview-table th {
+            background: #f9fafb;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .preview-table td {
+            padding: 12px 16px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 14px;
+        }
+
+        .preview-table tr:hover {
+            background: #f9fafb;
+        }
+
+        .preview-table input {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .preview-table input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .torre-badge {
+            display: inline-block;
+            margin-top: 4px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #dbeafe;
+            color: #1e40af;
+            white-space: nowrap;
+        }
+        .torre-badge.torre-aviso {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-new {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-duplicate {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-error {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        /* Results Section */
+        .results-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .result-card {
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .result-card h3 {
+            font-size: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .result-success {
+            color: #059669;
+        }
+
+        .result-skipped {
+            color: #d97706;
+        }
+
+        .result-error {
+            color: #dc2626;
+        }
+
+        .result-list {
+            list-style: none;
+        }
+
+        .result-list li {
+            padding: 6px 0;
+            font-size: 14px;
+            color: #4b5563;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .result-list li:last-child {
+            border-bottom: none;
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Instructions */
+        .instructions {
+            background: #eff6ff;
+            border-left: 4px solid #667eea;
+            padding: 16px 20px;
+            border-radius: 0 10px 10px 0;
+            margin-bottom: 20px;
+        }
+
+        .instructions h4 {
+            color: #1e40af;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .instructions p {
+            color: #3b82f6;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .instructions code {
+            background: #dbeafe;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .instructions pre {
+            background: #dbeafe;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 8px;
+            font-size: 12px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .content {
+                padding: 16px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                border-radius: 12px;
+            }
+
+            .preview-table th,
+            .preview-table td {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+
+            .preview-table input {
+                padding: 4px 6px;
+                font-size: 12px;
+            }
+        }
+    </style>
+    <base target="_blank">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📥 Importador de Leads a GHL</h1>
+            <p>Pega tus leads, edítalos si es necesario, y envíalos a GoHighLevel</p>
+        </div>
+
+        <div class="content">
+            <!-- Instructions -->
+            <div class="instructions">
+                <h4>📝 Formato esperado</h4>
+                <p>Pega los leads en el orden: <code>Nombre</code> → <code>Teléfono</code> →
+                    <code>Fecha de Mudanza</code> → <code>Unidad</code>.<br>
+                    Separa cada lead con una línea en blanco. Ejemplo:
+                </p>
+                <pre>John Ficticio
+555-0100
+#101
+M/I 06/01
+
+Jane Inventada
+555-0199
+M/I 07/15
+#202B
+
+Name: Test Usuario ||| Phone: (555) 0202 ||| Unit: #305 ||| Move-In: 08/01</pre>
+            </div>
+
+            <!-- Agent & Property -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="agentName">👤 Nombre del Agente</label>
+                    <input type="text" id="agentName" placeholder="Ej: Hannah, D'Andrea, Ramon..." autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="propertyName">
+                        🏢 Property Name
+                        <button type="button" onclick="recargarProperties()"
+                                title="Volver a leer la hoja Properties de Drive"
+                                style="float:right;background:none;border:none;color:#6b7280;cursor:pointer;font-size:12px;padding:2px 4px;">
+                            ↻ Recargar
+                        </button>
+                        <button type="button" onclick="configurarClave()" id="btnClave"
+                                title="Configurar la clave de acceso"
+                                style="float:right;background:none;border:none;color:#6b7280;cursor:pointer;font-size:12px;padding:2px 6px;">
+                            🔑
+                        </button>
+                    </label>
+                    <select id="propertyName">
+                        <option value="">Cargando propiedades...</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Source Preview -->
+            <div class="source-preview">
+                📌 <strong>Contact Source:</strong> <span id="sourcePreview">Completa agente y propiedad...</span>
+            </div>
+
+            <!-- Text Area -->
+            <div class="form-group">
+                <label for="leadsText">📋 Leads (pega aquí)</label>
+                <textarea id="leadsText" placeholder="John Ficticio
+555-0100
+#101
+M/I 06/01
+
+Jane Inventada
+555-0199
+M/I 07/15
+#202B
+
+Name: Test Usuario ||| Phone: (555) 0202 ||| Unit: #305 ||| Move-In: 08/01"></textarea>
+            </div>
+
+            <!-- Actions -->
+            <div class="actions">
+                <button class="btn btn-primary" onclick="parsearLeads()">
+                    🔍 Parsear y Previsualizar
+                </button>
+                <button class="btn btn-secondary" onclick="limpiarTodo()">
+                    🗑️ Limpiar
+                </button>
+            </div>
+
+            <!-- Loading -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Procesando leads...</p>
+            </div>
+
+            <!-- Preview Section -->
+            <div class="preview-section" id="previewSection">
+                <div class="preview-header">
+                    <h2>👁️ Vista Previa</h2>
+                    <span class="preview-count" id="previewCount">0 leads</span>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="preview-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th>Phone</th>
+                                <th>Move In</th>
+                                <th>Unit</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="previewTableBody">
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="actions" style="margin-top:20px;">
+                    <button class="btn btn-success" onclick="enviarAGHL()">
+                        ✅ Enviar <span id="btnCreateCount">0</span> Leads a GHL
+                    </button>
+                    <button class="btn btn-secondary" onclick="volverAEditar()">
+                        ✏️ Volver a Editar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section" id="resultsSection">
+                <div class="preview-header">
+                    <h2>📊 Resultados</h2>
+                </div>
+
+                <div id="resultsContainer" aria-live="polite">
+                    <!-- Se llena dinámicamente -->
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="nuevoBatch()">
+                        🔄 Nuevo Batch
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // CONFIGURACIÓN
+        // ============================================================
+        const API_BASE = '';
+        let propertyNames = []; // Se carga desde la hoja Properties
+        let parsedLeads = [];   // Leads parseados listos para enviar
+
+        // ── Clave de acceso ──────────────────────────────────────────
+        // Se guarda en este navegador (localStorage) y se manda en cada
+        // petición de escritura. Solo se escribe una vez.
+        function apiHeaders() {
+            const h = { 'Content-Type': 'application/json' };
+            const clave = localStorage.getItem('ghlApiKey');
+            if (clave) h['X-API-Key'] = clave;
+            return h;
+        }
+
+        function configurarClave() {
+            const actual = localStorage.getItem('ghlApiKey') || '';
+            const nueva = prompt(
+                'Pega la clave de acceso (API_KEY).\n\n' +
+                'Es la misma que está en las variables de entorno de Render.\n' +
+                'Se guarda solo en este navegador; escríbela una vez y listo.',
+                actual
+            );
+            if (nueva === null) return;            // canceló
+
+            const limpia = nueva.trim();
+            if (limpia) {
+                localStorage.setItem('ghlApiKey', limpia);
+                mostrarToast('🔑 Clave guardada en este navegador', 'success');
+            } else {
+                localStorage.removeItem('ghlApiKey');
+                mostrarToast('🔑 Clave borrada', 'partial');
+            }
+            pintarEstadoClave();
+        }
+        window.configurarClave = configurarClave;
+
+        function pintarEstadoClave() {
+            const btn = document.getElementById('btnClave');
+            if (!btn) return;
+            const hay = !!localStorage.getItem('ghlApiKey');
+            btn.textContent = hay ? '🔑' : '🔑 Falta clave';
+            btn.style.color = hay ? '#6b7280' : '#dc2626';
+            btn.style.fontWeight = hay ? 'normal' : '600';
+            btn.title = hay
+                ? 'Clave configurada. Clic para cambiarla.'
+                : 'Sin clave: los envíos serán rechazados. Clic para ponerla.';
+        }
+
+        /** Si el servidor responde 401, la clave está mal o falta. */
+        function esNoAutorizado(response) {
+            if (response.status !== 401) return false;
+            mostrarToast('🔑 Clave incorrecta o ausente', 'error');
+            configurarClave();
+            return true;
+        }
+
+        // ============================================================
+        // INICIALIZACIÓN
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            pintarEstadoClave();
+            await cargarPropertyNames();
+            setupSourcePreview();
+        });
+
+        // ============================================================
+        // CARGAR PROPERTY NAMES DESDE GHL
+        // ============================================================
+        // Las propiedades salen de la hoja Properties, que es la misma
+        // fuente que usa el servidor para armar la dirección. Antes venían
+        // del picklist del custom field de GHL: si un nombre estaba escrito
+        // distinto en los dos lados, el contacto se creaba sin dirección
+        // y sin link de WhatsApp, sin avisar.
+        async function cargarPropertyNames(retries = 5) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(`${API_BASE}/api/properties`);
+                    if (!response.ok) throw new Error('Error HTTP ' + response.status);
+
+                    const data = await response.json();
+                    propertyNames = data.properties || [];
+
+                    if (propertyNames.length) {
+                        llenarSelectProperty();
+                        pintarFuente(data);
+                        return;
+                    }
+
+                    // La hoja aún no cargó (Render recién despierta)
+                    if (i < retries - 1) {
+                        await new Promise(r => setTimeout(r, 1000));
+                        continue;
+                    }
+                    ponerOpcionUnica('La hoja Properties no cargó');
+
+                } catch (error) {
+                    if (i < retries - 1) {
+                        await new Promise(r => setTimeout(r, 1000));
+                        continue;
+                    }
+                    console.error('Error cargando propiedades:', error);
+                    ponerOpcionUnica('Error cargando propiedades');
+                }
+            }
+        }
+
+        /**
+         * Avisa de dónde salieron las propiedades. Si estamos en respaldo,
+         * las direcciones pueden estar desactualizadas y hay que saberlo.
+         */
+        function pintarFuente(data) {
+            let aviso = document.getElementById('fuenteProps');
+            if (!aviso) {
+                aviso = document.createElement('div');
+                aviso.id = 'fuenteProps';
+                aviso.style.cssText = 'font-size:11px;margin-top:4px;';
+                document.getElementById('propertyName').after(aviso);
+            }
+
+            if (data.fuente === 'sheets') {
+                aviso.textContent = `✅ ${data.cargadas} propiedades desde Google Sheets`;
+                aviso.style.color = '#059669';
+            } else if (data.fuente === 'fallback') {
+                aviso.textContent =
+                    `⚠️ ${data.cargadas} propiedades desde el archivo de respaldo — ` +
+                    `no se pudo leer Google Sheets, los datos pueden estar desactualizados`;
+                aviso.style.color = '#d97706';
+                aviso.style.fontWeight = '600';
+            } else {
+                aviso.textContent = '❌ Sin catálogo de propiedades';
+                aviso.style.color = '#dc2626';
+            }
+        }
+
+        function ponerOpcionUnica(texto) {
+            const select = document.getElementById('propertyName');
+            select.replaceChildren(new Option(texto, ''));
+        }
+
+        function llenarSelectProperty() {
+            const select = document.getElementById('propertyName');
+            const opciones = [new Option('Selecciona una propiedad...', '')];
+
+            propertyNames.forEach(prop => {
+                const o = new Option(prop.name, prop.name);
+                // Al pasar el mouse se ve la dirección que se va a usar
+                const partes = [prop.address, prop.city, prop.zip].filter(Boolean);
+                if (partes.length) o.title = partes.join(', ');
+                opciones.push(o);
+            });
+
+            select.replaceChildren(...opciones);
+        }
+
+        // Recargar la hoja sin reiniciar el servidor
+        async function recargarProperties() {
+            try {
+                const r = await fetch(`${API_BASE}/api/properties/reload`, {
+                    method: 'POST', headers: apiHeaders()
+                });
+                const d = await r.json();
+                if (!d.success) throw new Error(d.error || 'Falló la recarga');
+                await cargarPropertyNames();
+                mostrarToast(`🏢 ${d.cargadas} propiedades recargadas desde ${d.origen}`, 'success');
+            } catch (e) {
+                mostrarToast('❌ ' + e.message, 'error');
+            }
+        }
+        window.recargarProperties = recargarProperties;
+
+        // ============================================================
+        // PREVIEW DEL SOURCE (Agente + @ + Property)
+        // ============================================================
+        function setupSourcePreview() {
+            const agentInput = document.getElementById('agentName');
+            const propertySelect = document.getElementById('propertyName');
+
+            function updatePreview() {
+                const agent = agentInput.value.trim();
+                const property = propertySelect.value;
+                const preview = document.getElementById('sourcePreview');
+
+                if (agent && property) {
+                    preview.textContent = `${agent}@${property}`;
+                    preview.style.color = '#059669';
+                } else {
+                    preview.textContent = 'Completa agente y propiedad...';
+                    preview.style.color = '#6b7280';
+                }
+            }
+
+            agentInput.addEventListener('input', updatePreview);
+            propertySelect.addEventListener('change', updatePreview);
+        }
+
+        // ============================================================
+        // PARSEAR LEADS
+        // ============================================================
+        async function parsearLeads() {
+            const rawText = document.getElementById('leadsText').value.trim();
+            const agent = document.getElementById('agentName').value.trim();
+            const property = document.getElementById('propertyName').value;
+
+            if (!agent) {
+                alert('❌ Escribe el nombre del agente');
+                return;
+            }
+            if (!property) {
+                alert('❌ Selecciona una propiedad');
+                return;
+            }
+            if (!rawText) {
+                alert('❌ Pega los leads en el text area');
+                return;
+            }
+
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('previewSection').classList.remove('active');
+
+            setTimeout(async () => {
+                try {
+                    const source = `${agent}@${property}`;
+
+                    const response = await fetch(`${API_BASE}/api/contacts/parse`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: rawText, source, property })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Error del servidor');
+                    }
+
+                    const errores = data.leads.filter(l => l.error);
+                    if (errores.length > 0) {
+                        const msgs = errores.map(e => `  Bloque ${e.index + 1}: ${e.error}`).join('\n');
+                        if (!confirm(`⚠️ Hay ${errores.length} bloque(s) con problemas:\n${msgs}\n\n¿Mostrar vista previa de todas formas?`)) {
+                            document.getElementById('loading').classList.remove('active');
+                            return;
+                        }
+                    }
+
+                    parsedLeads = data.leads;
+                    mostrarPreview();
+                    document.getElementById('loading').classList.remove('active');
+                    document.getElementById('previewSection').classList.add('active');
+
+                } catch (error) {
+                    document.getElementById('loading').classList.remove('active');
+                    alert('❌ Error parseando: ' + error.message);
+                }
+            }, 300);
+        }
+
+        // ============================================================
+        // MOSTRAR PREVIEW
+        // ============================================================
+        function mostrarPreview() {
+            const tbody = document.getElementById('previewTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            const valids = parsedLeads.filter(l => !l.error);
+
+            parsedLeads.forEach((lead, index) => {
+                const row = document.createElement('tr');
+                const hasError = !!lead.error;
+
+                if (hasError) {
+                    row.style.background = '#fef2f2';
+                }
+
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td><input type="text" value="${escapeHtml(lead.firstName)}" data-field="firstName" data-index="${index}" ${hasError ? 'style="background:#fee2e2;"' : ''}></td>
+                    <td><input type="text" value="${escapeHtml(lead.lastName)}" data-field="lastName" data-index="${index}" ${hasError ? 'style="background:#fee2e2;"' : ''}></td>
+                    <td><input type="text" value="${escapeHtml(lead.phone)}" data-field="phone" data-index="${index}" ${hasError ? 'style="background:#fee2e2;"' : ''}></td>
+                    <td><input type="text" value="${escapeHtml(lead.moveIn)}" data-field="moveIn" data-index="${index}"></td>
+                    <td>
+                        <input type="text" value="${escapeHtml(lead.unit)}" data-field="unit" data-index="${index}">
+                        ${lead.torre ? `<div class="torre-badge${lead.avisoTorre ? ' torre-aviso' : ''}" title="${escapeHtml(lead.avisoTorre || lead.direccion || '')}">${lead.avisoTorre ? '⚠️ ' : '🏢 '}${escapeHtml(lead.torre)}</div>` : ''}
+                    </td>
+                    <td>${hasError
+                        ? '<span class="status-badge status-error" title="' + escapeHtml(lead.error) + '">Error</span>'
+                        : '<span class="status-badge status-new">OK</span>'
+                    }</td>
+                `;
+                tbody.appendChild(row);
+
+                if (hasError) {
+                    const cell = row.querySelectorAll('td')[6];
+                    cell.firstChild.title = lead.error;
+                }
+            });
+
+            const pc = document.getElementById('previewCount');
+            if (pc) pc.textContent = `${parsedLeads.length} leads (${valids.length} válidos)`;
+            const bc = document.getElementById('btnCreateCount');
+            if (bc) bc.textContent = valids.length;
+
+            tbody.querySelectorAll('input').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    const field = e.target.dataset.field;
+                    parsedLeads[index][field] = e.target.value;
+                });
+            });
+        }
+
+        // textContent → innerHTML escapa & < > pero NO las comillas, y estos
+        // valores se interpolan dentro de value="...". Un nombre con una
+        // comilla doble rompía el atributo.
+        /** Crea la tarjeta de una sección de resultados. */
+        function crearCard(claseTitulo, titulo) {
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            const h3 = document.createElement('h3');
+            h3.className = claseTitulo;
+            h3.textContent = titulo;
+            card.appendChild(h3);
+            return card;
+        }
+
+        /** <span> con texto seguro y estilo inline. */
+        function texto(contenido, estilo = '') {
+            const span = document.createElement('span');
+            span.textContent = contenido;
+            if (estilo) span.style.cssText = estilo;
+            return span;
+        }
+
+        function escapeHtml(text) {
+            return String(text ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // ============================================================
+        // ENVIAR A GHL
+        // ============================================================
+        async function enviarAGHL() {
+            const valids = parsedLeads.filter(l => !l.error);
+            if (valids.length === 0) {
+                alert('No hay leads válidos para enviar. Revisa los que tienen error.');
+                return;
+            }
+
+            const btn = document.querySelector('.btn-success');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = `⏳ Enviando ${valids.length} leads...`;
+            }
+
+            try {
+                // `campos` lleva lo que corregiste a mano en la tabla y gana
+                // sobre el parseo del servidor. Antes solo se mandaba `raw`
+                // y el servidor re-parseaba: las ediciones se perdían.
+                const leadsPayload = valids.map(lead => ({
+                    raw: lead.raw,
+                    source: lead.source,
+                    property: lead.property,
+                    campos: {
+                        firstName: lead.firstName,
+                        lastName: lead.lastName,
+                        phone: lead.phone,
+                        unit: lead.unit,
+                        moveIn: lead.moveIn,
+                        email: lead.email
+                    }
+                }));
+
+                const response = await fetch(`${API_BASE}/api/contacts/batch`, {
+                    method: 'POST',
+                    headers: apiHeaders(),
+                    body: JSON.stringify({ leads: leadsPayload })
+                });
+
+                if (esNoAutorizado(response)) return;
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'Error del servidor');
+                }
+
+                mostrarResultados(data.results, data.summary);
+
+            } catch (error) {
+                alert('Error enviando lote: ' + error.message);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = `✅ Enviar ${valids.length} Leads a GHL`;
+                }
+            }
+        }
+
+        // ============================================================
+        // MOSTRAR RESULTADOS
+        // ============================================================
+        function mostrarResultados(results, summary) {
+            document.getElementById('previewSection').classList.remove('active');
+            document.getElementById('resultsSection').classList.add('active');
+
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = '';
+
+            // Summary card
+            const summaryCard = document.createElement('div');
+            summaryCard.className = 'result-card';
+            summaryCard.style.background = '#f0fdf4';
+            summaryCard.style.borderLeft = '4px solid #22c55e';
+            summaryCard.innerHTML = `
+                <h3 style="color:#166534;margin-bottom:8px;">📊 Resumen del Lote</h3>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;">
+                    <div style="background:white;padding:12px;border-radius:8px;text-align:center;">
+                        <div style="font-size:24px;font-weight:700;color:#374151;">${summary.total}</div>
+                        <div style="font-size:12px;color:#6b7280;">Total</div>
+                    </div>
+                    <div style="background:white;padding:12px;border-radius:8px;text-align:center;">
+                        <div style="font-size:24px;font-weight:700;color:#059669;">${summary.created}</div>
+                        <div style="font-size:12px;color:#6b7280;">Creados</div>
+                    </div>
+                    <div style="background:white;padding:12px;border-radius:8px;text-align:center;">
+                        <div style="font-size:24px;font-weight:700;color:#d97706;">${summary.duplicates}</div>
+                        <div style="font-size:12px;color:#6b7280;">Duplicados</div>
+                    </div>
+                    <div style="background:white;padding:12px;border-radius:8px;text-align:center;">
+                        <div style="font-size:24px;font-weight:700;color:#dc2626;">${summary.errors}</div>
+                        <div style="font-size:12px;color:#6b7280;">Errores</div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(summaryCard);
+
+            // ── Creados ──────────────────────────────────────────────
+            // Se construye con el DOM en vez de innerHTML: los nombres y los
+            // mensajes de error de GHL son texto ajeno y no deben poder
+            // inyectar marcado. Además innerHTML += re-parsea todo lo ya
+            // pintado y pierde los listeners.
+            if (results.created.length > 0) {
+                const smsOk = results.created.filter(r => r.smsSent).length;
+                const smsFail = results.created.length - smsOk;
+
+                const card = crearCard('result-success',
+                    `✅ Creados (${results.created.length})`);
+
+                const resumen = document.createElement('div');
+                resumen.style.cssText = 'font-size:13px;margin-bottom:10px;color:#374151;';
+                resumen.textContent = `📨 SMS: ${smsOk} enviado${smsOk !== 1 ? 's' : ''}` +
+                    (smsFail > 0 ? `, ${smsFail} fallido${smsFail !== 1 ? 's' : ''}` : '');
+                card.appendChild(resumen);
+
+                const ul = document.createElement('ul');
+                ul.className = 'result-list';
+
+                results.created.forEach(r => {
+                    const li = document.createElement('li');
+                    li.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 0;';
+
+                    li.appendChild(texto(`#${r.index + 1}`, 'color:#9ca3af;'));
+                    li.appendChild(texto(r.name, 'font-weight:600;'));
+                    li.appendChild(texto(r.phone, 'color:#6b7280;'));
+
+                    // Estado del SMS
+                    const sms = texto(r.smsSent ? '📨✅' : '📨❌', r.smsError ? 'cursor:help;' : '');
+                    if (r.smsError) sms.title = r.smsError;
+                    li.appendChild(sms);
+
+                    // Dirección armada desde la hoja Properties.
+                    // Si viene vacía, la propiedad no se encontró.
+                    if (r.address) {
+                        li.appendChild(texto('📍 ' + r.address, 'color:#059669;font-size:12px;'));
+                    } else {
+                        const aviso = texto('⚠️ sin dirección', 'color:#dc2626;font-size:12px;font-weight:600;');
+                        aviso.title = 'La propiedad no se encontró en la hoja Properties. ' +
+                                      'El contacto quedó sin address1 y sin link de WhatsApp.';
+                        li.appendChild(aviso);
+                    }
+
+                    // El wa.me, clickeable desde aquí
+                    if (r.waLink) {
+                        const a = document.createElement('a');
+                        a.href = r.waLink;
+                        a.target = '_blank';
+                        a.rel = 'noopener noreferrer';
+                        a.textContent = '💬 WhatsApp';
+                        a.style.cssText = 'color:#25D366;font-weight:600;font-size:12px;text-decoration:none;';
+                        li.appendChild(a);
+                    }
+
+                    // Dónde cayó en el tracker
+                    if (r.zionRow) {
+                        const t = texto('📊 ' + r.zionRow, 'color:#6b7280;font-size:12px;');
+                        if (r.zionTabCreada) {
+                            t.textContent += ' (pestaña nueva)';
+                            t.style.color = '#7c3aed';
+                            t.style.fontWeight = '600';
+                        }
+                        li.appendChild(t);
+                    } else if (r.zionError) {
+                        const t = texto('📊 no se escribió', 'color:#dc2626;font-size:12px;cursor:help;');
+                        t.title = r.zionError;
+                        li.appendChild(t);
+                    }
+
+                    ul.appendChild(li);
+                });
+
+                card.appendChild(ul);
+                container.appendChild(card);
+            }
+
+            // ── Duplicados ───────────────────────────────────────────
+            if (results.duplicates.length > 0) {
+                const card = crearCard('result-skipped',
+                    `⏭️ Saltados - Duplicados (${results.duplicates.length})`);
+                const ul = document.createElement('ul');
+                ul.className = 'result-list';
+                results.duplicates.forEach(r => {
+                    const li = document.createElement('li');
+                    li.textContent = `#${r.index + 1} ${r.name} | ${r.phone || ''}`;
+                    ul.appendChild(li);
+                });
+                card.appendChild(ul);
+                container.appendChild(card);
+            }
+
+            // ── Errores ──────────────────────────────────────────────
+            if (results.errors.length > 0) {
+                const card = crearCard('result-error',
+                    `❌ Errores (${results.errors.length})`);
+                const ul = document.createElement('ul');
+                ul.className = 'result-list';
+                results.errors.forEach(r => {
+                    const li = document.createElement('li');
+                    li.textContent = `#${r.index + 1} ${r.name} | ${r.phone || ''} | ${r.error}`;
+                    ul.appendChild(li);
+                });
+                card.appendChild(ul);
+                container.appendChild(card);
+            }
+
+            const smsOk = results.created.filter(r => r.smsSent).length;
+            const smsTotal = results.created.length;
+            if (smsTotal > 0) {
+                const icon = smsOk === smsTotal ? 'success' : 'partial';
+                const text = smsOk === smsTotal
+                    ? `✅ Lote completado — ${smsTotal} contacto${smsTotal !== 1 ? 's' : ''} creado${smsTotal !== 1 ? 's' : ''}, ${smsOk} SMS enviado${smsOk !== 1 ? 's' : ''}`
+                    : `⚠️ ${summary.created} contacto${summary.created !== 1 ? 's' : ''} creado${summary.created !== 1 ? 's' : ''}, ${smsOk}/${smsTotal} SMS enviados`;
+                mostrarToast(text, icon);
+            }
+        }
+
+        function mostrarToast(text, type) {
+            const existing = document.querySelector('.toast-notification');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = `toast-notification ${type}`;
+            toast.textContent = text;
+            document.body.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.add('show');
+            });
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }, 4000);
+        }
+
+        // ============================================================
+        // UTILIDADES
+        // ============================================================
+        function limpiarTodo() {
+            document.getElementById('leadsText').value = '';
+            document.getElementById('agentName').value = '';
+            document.getElementById('propertyName').value = '';
+            document.getElementById('sourcePreview').textContent = 'Completa agente y propiedad...';
+            document.getElementById('previewSection').classList.remove('active');
+            document.getElementById('resultsSection').classList.remove('active');
+            parsedLeads = [];
+        }
+
+        function volverAEditar() {
+            document.getElementById('previewSection').classList.remove('active');
+            document.getElementById('resultsSection').classList.remove('active');
+            document.getElementById('leadsText').focus();
+        }
+
+        function nuevoBatch() {
+            limpiarTodo();
+            document.getElementById('leadsText').focus();
+        }
+    </script>
+</body>
+
+</html>

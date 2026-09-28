@@ -1,0 +1,29 @@
+{
+  "dependencies": {
+    "axios": "^1.16.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "googleapis": "^176.0.0"
+  },
+  "name": "ghl-api-integration",
+  "version": "1.4.6",
+  "private": true,
+  "description": "Batch lead import + SMS for GoHighLevel",
+  "main": "index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "fallback": "node scripts/generar-fallback.js",
+    "fusionar": "node scripts/fusionar-hoja.js",
+    "validar": "node scripts/validar-catalogo.js",
+    "test:pago": "node scripts/test-pago.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

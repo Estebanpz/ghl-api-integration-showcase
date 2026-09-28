@@ -1,0 +1,20 @@
+# Dependencias
+node_modules/
+
+# Secretos — NUNCA versionar
+.env
+.env.*
+!.env.example
+AGENTS.md
+api.http
+
+# Llaves de service account de Google (cualquier nombre)
+*-service-account*.json
+root-dispatch-*.json
+credentials.json
+test-properties.json
+
+# Sistema
+.DS_Store
+*.log
+_to_delete/
